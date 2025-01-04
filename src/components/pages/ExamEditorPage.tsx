@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, FileJson, Upload } from 'lucide-react';
-import { Alert } from './ui/alert';
+import { Alert } from '../ui/alert';
 import {
   ChoiceQuestion,
   FillInQuestion,
@@ -16,13 +16,13 @@ import {
   TextQuestion,
 } from '@/types/question';
 import { downloadJSON, generateUniqueId } from '@/components/exam-editor/utils';
-import { QuestionCard } from './exam-editor/QuestionCard';
-import { ChoiceQuestionFields } from './exam-editor/ChoiceQuestionFields';
-import { TextQuestionFields } from './exam-editor/TextQuestionFields';
-import { FillInQuestionFields } from './exam-editor/FillInQuestionFields';
-import { SortQuestionFields } from './exam-editor/SortQuestionFields';
+import { QuestionCard } from '../exam-editor/QuestionCard';
+import { ChoiceQuestionFields } from '../exam-editor/ChoiceQuestionFields';
+import { TextQuestionFields } from '../exam-editor/TextQuestionFields';
+import { FillInQuestionFields } from '../exam-editor/FillInQuestionFields';
+import { SortQuestionFields } from '../exam-editor/SortQuestionFields';
 
-const ExamEditor = () => {
+const ExamEditorPage = () => {
   const [examId, setExamId] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -381,4 +381,4 @@ const renderQuestionTypeFields = (
   }
 };
 
-export default ExamEditor;
+export default ExamEditorPage;

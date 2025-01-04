@@ -3,7 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Button } from './components/ui/button';
 import ExamApp from './components/ExamApp';
 import ExamAdminViewer from './components/ExamAdminViewer';
-const ExamEditor = React.lazy(() => import('./components/ExamEditor'));
+const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
 import Footer from './components/atoms/Footer';
@@ -72,7 +72,7 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <Suspense fallback={<div>Loading...</div>}>
-          <ExamEditor />
+          <ExamEditorPage />
         </Suspense>
         <Footer />
       </Layout>
