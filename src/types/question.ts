@@ -66,21 +66,25 @@ export type Question =
 export interface ChoiceAnswer {
   type: 'single-choice' | 'multiple-choice';
   selectedOptions: string[];
+  timestamp: number;
 }
 
 export interface TextAnswer {
   type: 'text';
   text: string;
+  timestamp: number;
 }
 
 export interface FillInAnswer {
   type: 'fill-in';
   answers: Record<string, string>;
+  timestamp: number;
 }
 
 export interface SortAnswer {
   type: 'sort';
   order: string[];
+  timestamp: number;
 }
 
 export type QuestionAnswer =

@@ -1,15 +1,35 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { createSecureZip } from '@/utils/crypto';
+} from './ui/dialog';
+import { createSecureZip } from '../utils/crypto';
+
+import { 
+  Question, 
+  QuestionAnswer,
+  ChoiceAnswer,
+  TextAnswer,
+  FillInAnswer,
+  SortAnswer,
+  ChoiceQuestion,
+  TextQuestion,
+  SortQuestion
+} from '../types/question';
+
+type QuestionResult = {
+  isCorrect: boolean;
+  earnedPoints: number;
+  possiblePoints: number;
+  needsManualGrading: boolean;
+  notAnswered: boolean;
+};
+
 import { ExamStartForm } from './exam-taking/ExamStartForm';
 import { ExamConfirmation } from './exam-taking/ExamConfirmation';
 import { QuestionRenderer } from './exam-taking/QuestionRenderer';
@@ -25,17 +45,17 @@ const ExamApp = () => {
   const [examState, setExamState] = useState<ExamState>('init');
   const [examId, setExamId] = useState('');
   const [username, setUsername] = useState('');
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: string]: any }>({});
+  const [answers, setAnswers] = useState<Record<string, QuestionAnswer>>({});
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [examResult, setExamResult] = useState<any>(null);
-  const [correctAnswers, setCorrectAnswers] = useState<any>(null);
+  const [correctAnswers, setCorrectAnswers] = useState<Record<string, ChoiceAnswer | TextAnswer | FillInAnswer | SortAnswer>>({});
   const [timeLimit, setTimeLimit] = useState<number | undefined>();
   const [examStartTime, setExamStartTime] = useState<number>(0);
 
-  const initializeAnswers = (questions: any[]) => {
-    const initialAnswers = {};
+  const initializeAnswers = (questions: Question[]) => {
+    const initialAnswers: Record<string, QuestionAnswer> = {};
     questions.forEach((question) => {
       switch (question.type) {
         case 'single-choice':
@@ -200,8 +220,12 @@ const ExamApp = () => {
         break;
 
       case 'text':
-        if (typeof answer.text !== 'string') {
-          return { ...answer, text: '' };
+        if (!answer || typeof answer.text !== 'string') {
+          return { 
+            type: 'text',
+            text: '',
+            timestamp: Date.now()
+          };
         }
         break;
 
@@ -224,15 +248,18 @@ const ExamApp = () => {
   };
 
   // 採点を実行する関数
-  const gradeExam = async (answers: any, correctAnswers: any) => {
+  const gradeExam = async (
+    answers: Record<string, QuestionAnswer>,
+    correctAnswers: Record<string, QuestionAnswer>
+  ) => {
     let totalPoints = 0;
     let earnedPoints = 0;
-    const questionResults = {};
+    const questionResults: Record<string, QuestionResult> = {};
 
     for (const question of questions) {
       const answer = validateAnswer(answers[question.id], question);
       const correct = correctAnswers[question.id];
-
+      
       // 回答が未設定の場合も採点対象に含める
       if (!answer) {
         totalPoints += question.points;
@@ -241,7 +268,7 @@ const ExamApp = () => {
           earnedPoints: 0,
           possiblePoints: question.points,
           needsManualGrading: question.gradingType === 'manual',
-          notAnswered: true, // 未回答フラグを追加
+          notAnswered: true,
         };
         continue;
       }
@@ -254,62 +281,62 @@ const ExamApp = () => {
 
       switch (question.type) {
         case 'single-choice':
-          isCorrect = answer.selectedOptions[0] === correct.correctOptions[0];
-          partialPoints = isCorrect ? question.points : 0;
+        case 'multiple-choice':
+          if (question.type === 'single-choice' || question.type === 'multiple-choice') {
+            const selectedSet = new Set<string>(answer.selectedOptions as string[]);
+            const correctSet = new Set<string>((question as ChoiceQuestion).correctOptions as string[]);
+            isCorrect =
+              selectedSet.size === correctSet.size &&
+              [...selectedSet].every((opt) => correctSet.has(opt));
+            partialPoints = isCorrect ? question.points : 0;
+          }
           break;
-
-        case 'multiple-choice': {
-          const selectedSet = new Set(answer.selectedOptions);
-          const correctSet = new Set(correct.correctOptions);
-          isCorrect =
-            selectedSet.size === correctSet.size &&
-            [...selectedSet].every((opt) => correctSet.has(opt));
-          partialPoints = isCorrect ? question.points : 0;
-          break;
-        }
 
         case 'text':
-          if (question.gradingType === 'auto') {
-            const answerText = answer.text.trim();
-            const correctText = correct.correctAnswer.trim();
-            isCorrect = correct.caseSensitive
+          if (question.type === 'text' && question.gradingType === 'auto') {
+            const answerText = answer?.text?.trim() || '';
+            const correctText = (question as TextQuestion).expectedAnswer?.trim() || '';
+            isCorrect = (question as TextQuestion).caseSensitive
               ? answerText === correctText
               : answerText.toLowerCase() === correctText.toLowerCase();
             partialPoints = isCorrect ? question.points : 0;
           } else {
-            partialPoints = 0; // 手動採点の場合は0点とする
+            partialPoints = 0;
           }
           break;
 
-        case 'fill-in': {
-          if (Object.keys(correct.answers).length === 0) {
-            partialPoints = 0;
-            break;
-          }
-          let correctBlanks = 0;
-          const totalBlanks = Object.keys(correct.answers).length;
-          Object.entries(correct.answers).forEach(
-            ([key, value]: [string, any]) => {
-              const userAnswer = answer.answers[key]?.trim() || '';
-              const correctAnswer = value.answer.trim();
-              if (value.caseSensitive) {
-                if (userAnswer === correctAnswer) correctBlanks++;
-              } else {
-                if (userAnswer.toLowerCase() === correctAnswer.toLowerCase())
-                  correctBlanks++;
-              }
+        case 'fill-in':
+          if (correct.type === 'fill-in') {
+            if (Object.keys(correct.answers).length === 0) {
+              partialPoints = 0;
+              break;
             }
-          );
-          partialPoints = (correctBlanks / totalBlanks) * question.points;
-          isCorrect = correctBlanks === totalBlanks;
+            let correctBlanks = 0;
+            const totalBlanks = Object.keys(correct.answers).length;
+            Object.entries(correct.answers).forEach(
+              ([key, value]: [string, any]) => {
+                const userAnswer = answer.answers[key]?.trim() || '';
+                const correctAnswer = value.answer.trim();
+                if (value.caseSensitive) {
+                  if (userAnswer === correctAnswer) correctBlanks++;
+                } else {
+                  if (userAnswer.toLowerCase() === correctAnswer.toLowerCase())
+                    correctBlanks++;
+                }
+              }
+            );
+            partialPoints = (correctBlanks / totalBlanks) * question.points;
+            isCorrect = correctBlanks === totalBlanks;
+          }
           break;
-        }
 
         case 'sort':
-          isCorrect =
-            JSON.stringify(answer.order) ===
-            JSON.stringify(correct.correctOrder);
-          partialPoints = isCorrect ? question.points : 0;
+          if (question.type === 'sort') {
+            isCorrect =
+              JSON.stringify(answer.order) ===
+              JSON.stringify((question as SortQuestion).correctOrder);
+            partialPoints = isCorrect ? question.points : 0;
+          }
           break;
       }
 
@@ -442,6 +469,7 @@ const ExamApp = () => {
                       {questions[currentQuestionIndex].text}
                     </p>
                     <QuestionRenderer
+                    initializeAnswers={answers}
                       question={questions[currentQuestionIndex]}
                       answer={answers[questions[currentQuestionIndex].id]}
                       onAnswer={(answer) =>
