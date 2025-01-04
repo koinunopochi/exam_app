@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Button } from './components/ui/button';
 import ExamApp from './components/ExamApp';
-import ExamAdminViewer from './components/ExamAdminViewer';
+import ExamAdminPage from './components/pages/ExamAdminPage';
 const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
@@ -62,7 +62,7 @@ const router = createBrowserRouter([
     path: '/viewer',
     element: (
       <Layout>
-        <ExamAdminViewer />
+        <ExamAdminPage />
         <Footer />
       </Layout>
     ),
