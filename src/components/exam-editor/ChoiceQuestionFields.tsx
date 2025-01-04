@@ -1,10 +1,10 @@
 import { ChoiceQuestion } from "@/types/question";
 import { generateUniqueId } from "./utils";
-import { Label } from "@radix-ui/react-label";
+import { Label } from '../ui/label';
 import { Button } from "../ui/button";
 import { Plus, Trash2 } from "lucide-react";
-import { Switch } from "@radix-ui/react-switch";
 import { Input } from "../ui/input";
+import { Switch } from "../ui/switch";
 
 export const ChoiceQuestionFields = ({
   question,

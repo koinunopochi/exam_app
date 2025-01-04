@@ -1,8 +1,8 @@
 import { FillInQuestion } from "@/types/question";
-import { Label } from "@radix-ui/react-label";
+import { Label } from '../ui/label';
 import { Textarea } from "../ui/textarea";
 import { Input } from "../ui/input";
-import { Switch } from "@radix-ui/react-switch";
+import { Switch } from '../ui/switch';
 
 export const FillInQuestionFields = ({
   question,

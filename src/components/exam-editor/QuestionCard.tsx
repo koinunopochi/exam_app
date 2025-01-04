@@ -1,9 +1,9 @@
 import { Question, QuestionType } from '@/types/question';
 import { Card, CardContent } from '../ui/card';
-import { Collapsible, CollapsibleContent } from '@radix-ui/react-collapsible';
+import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Label } from '@radix-ui/react-label';
+import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import {
@@ -12,7 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@radix-ui/react-select';
+} from '../ui/select';
 import { useState } from 'react';
 
 export const QuestionCard = ({

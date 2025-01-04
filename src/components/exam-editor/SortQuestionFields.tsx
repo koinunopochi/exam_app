@@ -1,5 +1,5 @@
 import { SortQuestion } from "@/types/question";
-import { Label } from "@radix-ui/react-label";
+import { Label } from '../ui/label';
 import { Button } from "../ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";

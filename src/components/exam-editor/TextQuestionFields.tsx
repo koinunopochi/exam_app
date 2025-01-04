@@ -1,7 +1,13 @@
 import { TextQuestion } from "@/types/question";
-import { Label } from "@radix-ui/react-label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@radix-ui/react-select";
-import { Switch } from "@radix-ui/react-switch";
+import { Label } from '../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import { Switch } from '../ui/switch';
 import { Textarea } from "../ui/textarea";
 
 export const TextQuestionFields = ({
