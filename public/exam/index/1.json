@@ -1,0 +1,16 @@
+[
+  {
+    "exam_id": "1",
+    "title": "Sample Exam 1",
+    "description": "This is a sample exam for testing purposes",
+    "author": "John Doe",
+    "create_date": "2024-01-01"
+  },
+  {
+    "exam_id": "2",
+    "title": "Sample Exam 2",
+    "description": "Another sample exam for testing",
+    "author": "Jane Smith",
+    "create_date": "2024-01-02"
+  }
+]

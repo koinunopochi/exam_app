@@ -154,3 +154,11 @@ export const isFillInAnswer = (
 export const isSortAnswer = (answer: QuestionAnswer): answer is SortAnswer => {
   return answer.type === 'sort';
 };
+
+export interface ExamIndexItem {
+  exam_id: string;
+  title: string;
+  description: string;
+  author: string;
+  create_date: string;
+}

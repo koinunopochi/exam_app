@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Button } from './components/ui/button';
 import ExamApp from './components/ExamApp';
 import ExamAdminPage from './components/pages/ExamAdminPage';
+import ExamIndexPage from './components/pages/ExamIndexPage';
 const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
@@ -11,7 +12,10 @@ import Footer from './components/atoms/Footer';
 const Navigation = () => (
   <nav className="bg-gray-100 p-4 mb-4">
     <div className="container mx-auto flex gap-4">
-      <Button variant="outline" onClick={() => (window.location.href = '/')}>
+      <Button
+        variant="outline"
+        onClick={() => (window.location.href = '/exam')}
+      >
         受験する
       </Button>
       <Button
@@ -52,6 +56,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => (
 const router = createBrowserRouter([
   {
     path: '/',
+    element: (
+      <Layout>
+        <ExamIndexPage />
+        <Footer />
+      </Layout>
+    ),
+  },
+  {
+    path: '/exam',
     element: (
       <>
         <ExamApp />

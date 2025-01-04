@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,8 +22,9 @@ import ExamScore from './exam-taking/ExamScore';
 type ExamState = 'init' | 'confirm' | 'exam' | 'complete';
 
 const ExamApp = () => {
+  const [searchParams] = useSearchParams();
   const [examState, setExamState] = useState<ExamState>('init');
-  const [examId, setExamId] = useState('');
+  const [examId, setExamId] = useState(searchParams.get('exam_id') || '');
   const [username, setUsername] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
