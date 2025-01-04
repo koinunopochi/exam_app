@@ -34,6 +34,7 @@ const ExamApp = () => {
   const [correctAnswers, setCorrectAnswers] = useState<any>(null);
   const [timeLimit, setTimeLimit] = useState<number | undefined>();
   const [examStartTime, setExamStartTime] = useState<number>(0);
+ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const initializeAnswers = (questions: any[]) => {
     const initialAnswers = {};
@@ -92,15 +93,24 @@ const ExamApp = () => {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/exams/${examId}/questions.json`
       );
-      if (!response.ok) throw new Error('Failed to load exam data');
+      if (!response.ok) {
+        setErrorMessage(
+          '試験データの取得に失敗しました。\n試験IDが正しいか確認してください。'
+        );
+        return false;
+      }
       const data: any = await response.json();
       setQuestions(data.questions);
       setTimeLimit(data.time_limit);
+      setErrorMessage(null);
       // 問題データ読み込み後に初期回答状態を設定
       setAnswers(initializeAnswers(data.questions));
       return true;
     } catch (error) {
       console.error('Error loading exam:', error);
+      setErrorMessage(
+        '試験データの取得中にエラーが発生しました。\n試験IDが正しいか確認してください。'
+      );
       return false;
     }
   };
@@ -520,6 +530,14 @@ const ExamApp = () => {
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
+      {errorMessage && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <span className="block sm:inline">{errorMessage}</span>
+        </div>
+      )}
       {renderContent()}
 
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
