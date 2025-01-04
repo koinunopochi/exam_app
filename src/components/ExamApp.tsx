@@ -445,6 +445,7 @@ const ExamApp = () => {
               setExamStartTime(Date.now());
               setExamState('exam');
             }}
+            timeLimit={timeLimit}
           />
         );
 
