@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,54 +24,14 @@ import {
   Upload,
 } from 'lucide-react';
 import { Alert } from './ui/alert';
-
-// 型定義
-type QuestionType =
-  | 'single-choice'
-  | 'multiple-choice'
-  | 'text'
-  | 'fill-in'
-  | 'sort';
-
-interface BaseQuestion {
-  id: string;
-  text: string;
-  type: QuestionType;
-  points: number;
-  gradingType: 'auto' | 'manual';
-}
-
-interface ChoiceQuestion extends BaseQuestion {
-  type: 'single-choice' | 'multiple-choice';
-  options: Array<{ id: string; text: string }>;
-  correctOptions: string[];
-}
-
-interface TextQuestion extends BaseQuestion {
-  type: 'text';
-  textType: 'short' | 'long';
-  caseSensitive: boolean;
-  expectedAnswer: string;
-}
-
-interface FillInQuestion extends BaseQuestion {
-  type: 'fill-in';
-  textWithBlanks: string;
-  blankAnswers: {
-    [key: string]: {
-      answer: string;
-      caseSensitive: boolean;
-    };
-  };
-}
-
-interface SortQuestion extends BaseQuestion {
-  type: 'sort';
-  items: string[];
-  correctOrder: string[];
-}
-
-type Question = ChoiceQuestion | TextQuestion | FillInQuestion | SortQuestion;
+import {
+  ChoiceQuestion,
+  FillInQuestion,
+  Question,
+  QuestionType,
+  SortQuestion,
+  TextQuestion,
+} from '@/types/question';
 
 // ユニークなIDを生成する関数
 const generateUniqueId = (prefix: string = '') => {
@@ -99,7 +58,7 @@ const ExamEditor = () => {
   const [examId, setExamId] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [timeLimit, setTimeLimit] = useState<number>(60); 
+  const [timeLimit, setTimeLimit] = useState<number>(60);
 
   // JSONインポート機能
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,16 +132,54 @@ const ExamEditor = () => {
     reader.readAsText(file);
   };
 
-  const addQuestion = () => {
-    const newQuestion: ChoiceQuestion = {
-      id: `q${questions.length + 1}`,
+  const createNewQuestion = (type: QuestionType, id: string): Question => {
+    const baseQuestion = {
+      id,
       text: '',
-      type: 'single-choice',
       points: 1,
-      gradingType: 'auto',
-      options: [],
-      correctOptions: [],
+      gradingType: 'auto' as const,
     };
+
+    switch (type) {
+      case 'single-choice':
+      case 'multiple-choice':
+        return {
+          ...baseQuestion,
+          type,
+          options: [],
+          correctOptions: [],
+        } as ChoiceQuestion;
+      case 'text':
+        return {
+          ...baseQuestion,
+          type: 'text',
+          textType: 'short' as const,
+          caseSensitive: false,
+          expectedAnswer: '',
+        } as TextQuestion;
+      case 'fill-in':
+        return {
+          ...baseQuestion,
+          type: 'fill-in',
+          textWithBlanks: '',
+          blankAnswers: {},
+        } as FillInQuestion;
+      case 'sort':
+        return {
+          ...baseQuestion,
+          type: 'sort',
+          items: [],
+          correctOrder: [],
+        } as SortQuestion;
+    }
+  };
+
+  const addQuestion = () => {
+    const newQuestion = createNewQuestion(
+      'single-choice',
+      `q${questions.length + 1}`
+    );
+
     setQuestions([...questions, newQuestion]);
   };
 
@@ -192,7 +189,15 @@ const ExamEditor = () => {
 
   const updateQuestion = (index: number, updates: Partial<Question>) => {
     setQuestions(
-      questions.map((q, i) => (i === index ? { ...q, ...updates } : q))
+      questions.map((q, i) => {
+        if (i !== index) return q;
+
+        if (updates.type && updates.type !== q.type) {
+          return createNewQuestion(updates.type, q.id);
+        }
+
+        return { ...q, ...updates } as Question;
+      })
     );
   };
 
@@ -213,10 +218,10 @@ const ExamEditor = () => {
       time_limit: timeLimit,
       questions: questions.map(
         ({
-          correctOptions,
-          expectedAnswer,
-          blankAnswers,
-          correctOrder,
+          // correctOptions,
+          // expectedAnswer,
+          // blankAnswers,
+          // correctOrder,
           ...questionData
         }) => questionData
       ),
@@ -299,7 +304,7 @@ const ExamEditor = () => {
                 placeholder="exam001"
               />
             </div>
-            
+
             {/* 制限時間の入力フィールドを追加 */}
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="timeLimit">制限時間（分）</Label>
@@ -376,17 +381,17 @@ const ExamEditor = () => {
 const QuestionCard = ({
   question,
   index,
-  totalQuestions,
+  // totalQuestions,
   onUpdate,
   onRemove,
-  onMove,
-}: {
+}: // onMove,
+{
   question: Question;
   index: number;
-  totalQuestions: number;
+  // totalQuestions: number;
   onUpdate: (updates: Partial<Question>) => void;
   onRemove: () => void;
-  onMove: (direction: 'up' | 'down') => void;
+  // onMove: (direction: 'up' | 'down') => void;
 }) => {
   const [isOpen, setIsOpen] = useState(true);
 
