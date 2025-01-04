@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import type { Question, QuestionAnswer } from '../types/question';
+import type { DragEvent } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
+import { Button } from 'src/components/ui/button';
 import {
   Table,
   TableBody,
@@ -8,33 +10,66 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from 'src/components/ui/table';
+import { ScrollArea } from 'src/components/ui/scroll-area';
+import { Progress } from 'src/components/ui/progress';
+import { Alert, AlertDescription } from 'src/components/ui/alert';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import JSZip from 'jszip';
 
 const ExamAdminViewer = () => {
-  const [examData, setExamData] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
+  const [examData, setExamData] = useState<{
+    examId: string;
+    username: string;
+    timestamp: number;
+    result: {
+      earnedPoints: number;
+      totalPoints: number;
+      percentage: number;
+      questionResults: Record<string, {
+        isCorrect: boolean;
+        earnedPoints: number;
+        possiblePoints: number;
+      }>;
+    };
+    answers: Record<string, QuestionAnswer>;
+    metadata: {
+      userAgent: string;
+      platform: string;
+      language: string;
+    };
+  } | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string, QuestionAnswer>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // 暗号化された結果ファイルを読み込む
-  const handleFileUpload = useCallback(async (files) => {
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setError('ファイルが選択されていません');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const zip = new JSZip();
       const zipContent = await zip.loadAsync(files[0]);
+      if (!zipContent) {
+        setError('ZIPファイルの読み込みに失敗しました');
+        return;
+      }
 
       // encrypted_data.jsonとkey.jsonを読み込む
       const encryptedDataPromise = zipContent
         .file('encrypted_data.json')
-        .async('text');
-      const keyDataPromise = zipContent.file('key.json').async('text');
+        ?.async('text');
+      const keyDataPromise = zipContent.file('key.json')?.async('text');
+
+      if (!encryptedDataPromise || !keyDataPromise) {
+        setError('ZIPファイルに必要なファイルが含まれていません');
+        return;
+      }
 
       const [encryptedDataText, keyDataText] = await Promise.all([
         encryptedDataPromise,
@@ -107,8 +142,9 @@ const ExamAdminViewer = () => {
       setQuestions(questionsData.questions);
       setAnswers(answersData.answers);
       setExamData(examResult);
-    } catch (err) {
-      setError('結果ファイルの読み込みに失敗しました: ' + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError('結果ファイルの読み込みに失敗しました: ' + message);
       console.error('Error processing result file:', err);
     } finally {
       setLoading(false);
@@ -117,7 +153,7 @@ const ExamAdminViewer = () => {
 
   // ドラッグ&ドロップの処理
   const handleDrop = useCallback(
-    (e) => {
+    (e: DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       const files = e.dataTransfer.files;
       if (files.length > 0) {
@@ -127,33 +163,81 @@ const ExamAdminViewer = () => {
     [handleFileUpload]
   );
 
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   }, []);
 
   // 回答の表示をフォーマット
-  const formatAnswer = (answer, question) => {
-    switch (question.type) {
-      case 'single-choice':
-      case 'multiple-choice': {
-        const selectedOptions = answer.selectedOptions.map((optId) => {
-          const option = question.options.find((opt) => opt.id === optId);
-          return option ? option.text : optId;
-        });
-        return selectedOptions.join(', ');
+  const formatChoiceAnswer = (
+    answer: Extract<QuestionAnswer, { type: 'single-choice' | 'multiple-choice' }>,
+    question: Extract<Question, { type: 'single-choice' | 'multiple-choice' }>
+  ): string => {
+    return answer.selectedOptions
+      .map((optId: string) => {
+        const option = question.options.find((opt) => opt.id === optId);
+        return option ? option.text : `不明な選択肢 (ID: ${optId})`;
+      })
+      .join(', ');
+  };
+
+  const formatTextAnswer = (
+    answer: Extract<QuestionAnswer, { type: 'text' }>
+  ): string => {
+    return answer.text || '回答なし';
+  };
+
+  const formatFillInAnswer = (
+    answer: Extract<QuestionAnswer, { type: 'fill-in' }>
+  ): string => {
+    return Object.entries(answer.answers)
+      .map(([key, value]) => `空欄${key}: ${value || '未入力'}`)
+      .join(', ');
+  };
+
+  const formatSortAnswer = (
+    answer: Extract<QuestionAnswer, { type: 'sort' }>,
+    question: Extract<Question, { type: 'sort' }>
+  ): string => {
+    return answer.order
+      .map((itemId: string) => {
+        const item = question.items[parseInt(itemId)];
+        return item || `不明な項目 (ID: ${itemId})`;
+      })
+      .join(' → ');
+  };
+
+  const formatAnswer = (answer: QuestionAnswer, question: Question): string => {
+    if (question.type !== answer.type) {
+      return '回答形式が一致しません';
+    }
+
+    try {
+      switch (question.type) {
+        case 'single-choice':
+        case 'multiple-choice':
+          return formatChoiceAnswer(
+            answer as Extract<QuestionAnswer, { type: 'single-choice' | 'multiple-choice' }>,
+            question as Extract<Question, { type: 'single-choice' | 'multiple-choice' }>
+          );
+        case 'text':
+          return formatTextAnswer(
+            answer as Extract<QuestionAnswer, { type: 'text' }>
+          );
+        case 'fill-in':
+          return formatFillInAnswer(
+            answer as Extract<QuestionAnswer, { type: 'fill-in' }>
+          );
+        case 'sort':
+          return formatSortAnswer(
+            answer as Extract<QuestionAnswer, { type: 'sort' }>,
+            question as Extract<Question, { type: 'sort' }>
+          );
+        default:
+          return '不明な回答形式';
       }
-      case 'text':
-        return answer.text;
-      case 'fill-in':
-        return Object.entries(answer.answers)
-          .map(([key, value]) => `空欄${key}: ${value}`)
-          .join(', ');
-      case 'sort':
-        return answer.order
-          .map((itemId) => question.items[parseInt(itemId)])
-          .join(' → ');
-      default:
-        return JSON.stringify(answer);
+    } catch (error) {
+      console.error('回答のフォーマット中にエラーが発生しました:', error);
+      return '回答の表示に失敗しました';
     }
   };
 
@@ -169,13 +253,22 @@ const ExamAdminViewer = () => {
               className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:bg-secondary/20"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              onClick={() => document.getElementById('fileInput').click()}
+                onClick={() => {
+                  const fileInput = document.getElementById('fileInput');
+                  if (fileInput) {
+                    fileInput.click();
+                  }
+                }}
             >
               <input
                 type="file"
                 id="fileInput"
                 className="hidden"
-                onChange={(e) => handleFileUpload(e.target.files)}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleFileUpload(e.target.files);
+                  }
+                }}
                 accept=".zip"
               />
               <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
