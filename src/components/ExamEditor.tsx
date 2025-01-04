@@ -35,6 +35,7 @@ import {
 import { downloadJSON, generateUniqueId } from '@/components/exam-editor/utils';
 import { QuestionCard } from './exam-editor/QuestionCard';
 import { ChoiceQuestionFields } from './exam-editor/ChoiceQuestionFields';
+import { TextQuestionFields } from './exam-editor/TextQuestionFields';
 
 const ExamEditor = () => {
   const [examId, setExamId] = useState('');
@@ -393,53 +394,6 @@ const renderQuestionTypeFields = (
     default:
       return null;
   }
-};
-
-const TextQuestionFields = ({
-  question,
-  onUpdate,
-}: {
-  question: TextQuestion;
-  onUpdate: (updates: Partial<TextQuestion>) => void;
-}) => {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>テキストタイプ</Label>
-        <Select
-          value={question.textType}
-          onValueChange={(value: 'short' | 'long') =>
-            onUpdate({ textType: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="short">短文</SelectItem>
-            <SelectItem value="long">長文</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          checked={question.caseSensitive}
-          onCheckedChange={(checked) => onUpdate({ caseSensitive: checked })}
-        />
-        <Label>大文字小文字を区別する</Label>
-      </div>
-
-      <div className="space-y-2">
-        <Label>正解</Label>
-        <Textarea
-          value={question.expectedAnswer}
-          onChange={(e) => onUpdate({ expectedAnswer: e.target.value })}
-          placeholder="正解となる文章を入力してください"
-        />
-      </div>
-    </div>
-  );
 };
 
 const FillInQuestionFields = ({
