@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+
 // ユニークなIDを生成する関数
 export const generateUniqueId = (prefix: string = '') => {
   const timestamp = Date.now().toString(36);
@@ -5,14 +7,21 @@ export const generateUniqueId = (prefix: string = '') => {
   return `${prefix}${timestamp}${random}`;
 };
 
-export const downloadJSON = (data: any, filename: string) => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json',
+export const downloadZIP = async (files: Array<{name: string, data: any}>) => {
+  const zip = new JSZip();
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  
+  // 各ファイルをzipに追加
+  files.forEach(file => {
+    zip.file(file.name, JSON.stringify(file.data, null, 2));
   });
-  const url = URL.createObjectURL(blob);
+
+  // zipファイルを生成してダウンロード
+  const content = await zip.generateAsync({type: 'blob'});
+  const url = URL.createObjectURL(content);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = `exam_export_${date}.zip`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

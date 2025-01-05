@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { ScrollArea } from '../ui/scroll-area';
 import { Plus, FileJson, Upload } from 'lucide-react';
 import { Alert } from '../ui/alert';
 import {
@@ -14,8 +14,8 @@ import {
   QuestionType,
   SortQuestion,
   TextQuestion,
-} from '@/types/question';
-import { downloadJSON, generateUniqueId } from '@/components/exam-editor/utils';
+} from '../../types/question';
+import { downloadZIP, generateUniqueId } from '../exam-editor/utils';
 import { QuestionCard } from '../exam-editor/QuestionCard';
 import { ChoiceQuestionFields } from '../exam-editor/ChoiceQuestionFields';
 import { TextQuestionFields } from '../exam-editor/TextQuestionFields';
@@ -24,12 +24,14 @@ import { SortQuestionFields } from '../exam-editor/SortQuestionFields';
 
 const ExamEditorPage = () => {
   const [examId, setExamId] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [author, setAuthor] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeLimit, setTimeLimit] = useState<number>(60);
 
-  // JSONインポート機能
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -42,13 +44,11 @@ const ExamEditorPage = () => {
           setExamId(jsonData.examId);
         }
 
-        // time_limitの読み込み
         if (jsonData.time_limit) {
           setTimeLimit(jsonData.time_limit);
         }
 
         if (jsonData.questions) {
-          // answersファイルを要求
           if (fileInputRef.current) {
             fileInputRef.current.click();
             fileInputRef.current.onchange = async (event) => {
@@ -56,10 +56,9 @@ const ExamEditorPage = () => {
               if (!answersFile) return;
 
               const answersReader = new FileReader();
-              answersReader.onload = (e) => {
+              answersReader.onload = (e: ProgressEvent<FileReader>) => {
                 try {
                   const answersData = JSON.parse(e.target?.result as string);
-                  // 問題と回答を結合
                   const combinedQuestions = jsonData.questions.map((q: any) => {
                     const answer = answersData.answers[q.id];
                     if (!answer) return q;
@@ -180,59 +179,24 @@ const ExamEditorPage = () => {
       return;
     }
 
-    // questions.jsonのデータ
-    const questionsJSON = {
-      examId,
+    const examData = {
+      exam_id: examId,
+      title: title.trim() || 'Untitled Exam',
+      description: description.trim() || 'No description',
+      author: author.trim() || 'Anonymous',
+      create_date: new Date().toISOString().split('T')[0],
       time_limit: timeLimit,
-      questions: questions.map(
-        ({
-          // correctOptions,
-          // expectedAnswer,
-          // blankAnswers,
-          // correctOrder,
-          ...questionData
-        }) => questionData
-      ),
+      questions: questions.map(({
+        ...questionData
+      }) => questionData)
     };
 
-    // answers.jsonのデータ
-    const answersJSON = {
-      examId,
-      answers: questions.reduce((acc, question) => {
-        switch (question.type) {
-          case 'single-choice':
-          case 'multiple-choice':
-            acc[question.id] = {
-              type: question.type,
-              correctOptions: question.correctOptions,
-            };
-            break;
-          case 'text':
-            acc[question.id] = {
-              type: question.type,
-              correctAnswer: question.expectedAnswer,
-              caseSensitive: question.caseSensitive,
-            };
-            break;
-          case 'fill-in':
-            acc[question.id] = {
-              type: question.type,
-              answers: question.blankAnswers,
-            };
-            break;
-          case 'sort':
-            acc[question.id] = {
-              type: question.type,
-              correctOrder: question.correctOrder,
-            };
-            break;
-        }
-        return acc;
-      }, {} as Record<string, any>),
-    };
-
-    downloadJSON(questionsJSON, `${examId}_questions.json`);
-    downloadJSON(answersJSON, `${examId}_answers.json`);
+    downloadZIP([
+      {
+        name: `${examId}.json`,
+        data: examData
+      }
+    ]);
   };
 
   return (
@@ -254,36 +218,67 @@ const ExamEditorPage = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="examId">試験ID</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExamId(generateUniqueId('exam_'))}
-                >
-                  自動生成
-                </Button>
+            <div className="space-y-4">
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="examId">試験ID</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExamId(generateUniqueId('exam_'))}
+                  >
+                    自動生成
+                  </Button>
+                </div>
+                <Input
+                  id="examId"
+                  value={examId}
+                  onChange={(e) => setExamId(e.target.value)}
+                  placeholder="exam001"
+                />
               </div>
-              <Input
-                id="examId"
-                value={examId}
-                onChange={(e) => setExamId(e.target.value)}
-                placeholder="exam001"
-              />
-            </div>
 
-            {/* 制限時間の入力フィールドを追加 */}
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="timeLimit">制限時間（分）</Label>
-              <Input
-                id="timeLimit"
-                type="number"
-                min="1"
-                value={timeLimit}
-                onChange={(e) => setTimeLimit(parseInt(e.target.value) || 60)}
-                placeholder="60"
-              />
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="title">タイトル</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="試験のタイトル"
+                />
+              </div>
+
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="description">説明</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="試験の説明"
+                />
+              </div>
+
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="author">作成者</Label>
+                <Input
+                  id="author"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  placeholder="作成者名"
+                />
+              </div>
+
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="timeLimit">制限時間（分）</Label>
+                <Input
+                  id="timeLimit"
+                  type="number"
+                  min="1"
+                  value={timeLimit}
+                  onChange={(e) => setTimeLimit(parseInt(e.target.value) || 60)}
+                  placeholder="60"
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
