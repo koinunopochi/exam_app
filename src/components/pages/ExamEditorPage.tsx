@@ -181,20 +181,28 @@ const ExamEditorPage = () => {
 
     const examData = {
       exam_id: examId,
-      title: title.trim() || 'Untitled Exam',
-      description: description.trim() || 'No description',
-      author: author.trim() || 'Anonymous',
-      create_date: new Date().toISOString().split('T')[0],
       time_limit: timeLimit,
       questions: questions.map(({
         ...questionData
       }) => questionData)
     };
 
+    const metadata = {
+      exam_id: examId,
+      title: title.trim() || 'Untitled Exam',
+      description: description.trim() || 'No description',
+      author: author.trim() || 'Anonymous',
+      create_date: new Date().toISOString().split('T')[0]
+    };
+
     downloadZIP([
       {
         name: `${examId}.json`,
         data: examData
+      },
+      {
+        name: `${examId}_metadata.json`,
+        data: metadata
       }
     ]);
   };
