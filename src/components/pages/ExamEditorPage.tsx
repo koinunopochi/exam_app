@@ -179,12 +179,53 @@ const ExamEditorPage = () => {
       return;
     }
 
-    const examData = {
+    const questionData = {
       exam_id: examId,
       time_limit: timeLimit,
       questions: questions.map(({
+        id,
+        type,
+        text,
+        points,
+        gradingType,
         ...questionData
-      }) => questionData)
+      }) => ({
+        id,
+        type,
+        text,
+        points,
+        gradingType,
+        ...questionData
+      }))
+    };
+
+    const answerData = {
+      exam_id: examId,
+      answers: questions.reduce((acc, question) => {
+        const { id, type } = question;
+        let answer;
+        
+        switch (type) {
+          case 'single-choice':
+          case 'multiple-choice':
+            answer = { correctOptions: (question as ChoiceQuestion).correctOptions };
+            break;
+          case 'text':
+            answer = {
+              correctAnswer: (question as TextQuestion).expectedAnswer,
+              caseSensitive: (question as TextQuestion).caseSensitive
+            };
+            break;
+          case 'fill-in':
+            answer = { answers: (question as FillInQuestion).blankAnswers };
+            break;
+          case 'sort':
+            answer = { correctOrder: (question as SortQuestion).correctOrder };
+            break;
+        }
+        
+        return { ...acc, [id]: answer };
+      }, {})
     };
 
     const metadata = {
@@ -197,8 +238,12 @@ const ExamEditorPage = () => {
 
     downloadZIP([
       {
-        name: `${examId}.json`,
-        data: examData
+        name: `${examId}_questions.json`,
+        data: questionData
+      },
+      {
+        name: `${examId}_answers.json`,
+        data: answerData
       },
       {
         name: `${examId}_metadata.json`,
