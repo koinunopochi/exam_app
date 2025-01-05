@@ -31,72 +31,89 @@ const ExamEditorPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeLimit, setTimeLimit] = useState<number>(60);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const jsonData = JSON.parse(e.target?.result as string);
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(e.target?.result as ArrayBuffer);
+        
+        // 必要なファイルを探す
+        const questionFile = Object.keys(zip.files).find(name => name.endsWith('_questions.json'));
+        const answerFile = Object.keys(zip.files).find(name => name.endsWith('_answers.json'));
+        const metadataFile = Object.keys(zip.files).find(name => name.endsWith('_metadata.json'));
 
-        if (jsonData.examId) {
-          setExamId(jsonData.examId);
+        if (!questionFile || !answerFile || !metadataFile) {
+          throw new Error('必要なファイルがZIP内に見つかりません');
         }
 
-        if (jsonData.time_limit) {
-          setTimeLimit(jsonData.time_limit);
+        // 各ファイルを読み込む
+        const [questionData, answerData, metadata] = await Promise.all([
+          zip.file(questionFile)?.async('string'),
+          zip.file(answerFile)?.async('string'),
+          zip.file(metadataFile)?.async('string')
+        ]);
+
+        if (!questionData || !answerData || !metadata) {
+          throw new Error('ファイルの読み込みに失敗しました');
         }
 
-        if (jsonData.questions) {
-          if (fileInputRef.current) {
-            fileInputRef.current.click();
-            fileInputRef.current.onchange = async (event) => {
-              const answersFile = (event.target as HTMLInputElement).files?.[0];
-              if (!answersFile) return;
+        // データをパース
+        const questions = JSON.parse(questionData);
+        const answers = JSON.parse(answerData);
+        const meta = JSON.parse(metadata);
 
-              const answersReader = new FileReader();
-              answersReader.onload = (e: ProgressEvent<FileReader>) => {
-                try {
-                  const answersData = JSON.parse(e.target?.result as string);
-                  const combinedQuestions = jsonData.questions.map((q: any) => {
-                    const answer = answersData.answers[q.id];
-                    if (!answer) return q;
+        // 状態を更新
+        if (meta.exam_id) {
+          setExamId(meta.exam_id);
+        }
+        if (meta.title) {
+          setTitle(meta.title);
+        }
+        if (meta.description) {
+          setDescription(meta.description);
+        }
+        if (meta.author) {
+          setAuthor(meta.author);
+        }
+        if (questions.time_limit) {
+          setTimeLimit(questions.time_limit);
+        }
 
-                    switch (q.type) {
-                      case 'single-choice':
-                      case 'multiple-choice':
-                        return { ...q, correctOptions: answer.correctOptions };
-                      case 'text':
-                        return {
-                          ...q,
-                          expectedAnswer: answer.correctAnswer,
-                          caseSensitive: answer.caseSensitive,
-                        };
-                      case 'fill-in':
-                        return { ...q, blankAnswers: answer.answers };
-                      case 'sort':
-                        return { ...q, correctOrder: answer.correctOrder };
-                      default:
-                        return q;
-                    }
-                  });
-                  setQuestions(combinedQuestions);
-                } catch (error: any) {
-                  console.error(error);
-                  alert('解答ファイルの形式が正しくありません');
-                }
+        // 質問と回答を結合
+        const combinedQuestions = questions.questions.map((q: any) => {
+          const answer = answers.answers[q.id];
+          if (!answer) return q;
+
+          switch (q.type) {
+            case 'single-choice':
+            case 'multiple-choice':
+              return { ...q, correctOptions: answer.correctOptions };
+            case 'text':
+              return {
+                ...q,
+                expectedAnswer: answer.correctAnswer,
+                caseSensitive: answer.caseSensitive
               };
-              answersReader.readAsText(answersFile);
-            };
+            case 'fill-in':
+              return { ...q, blankAnswers: answer.answers };
+            case 'sort':
+              return { ...q, correctOrder: answer.correctOrder };
+            default:
+              return q;
           }
-        }
+        });
+
+        setQuestions(combinedQuestions);
       } catch (error: any) {
         console.error(error);
-        alert('ファイルの形式が正しくありません');
+        alert('ZIPファイルの読み込みに失敗しました: ' + error.message);
       }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const createNewQuestion = (type: QuestionType, id: string): Question => {
@@ -335,19 +352,19 @@ const ExamEditorPage = () => {
             </div>
 
             <div className="flex gap-2">
-              <Input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                className="hidden"
-                ref={fileInputRef}
-              />
+                <Input
+                  type="file"
+                  accept=".zip"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  ref={fileInputRef}
+                />
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                JSONインポート
+                ZIPインポート
               </Button>
               <Button onClick={generateJSON} variant="outline">
                 <FileJson className="w-4 h-4 mr-2" />
