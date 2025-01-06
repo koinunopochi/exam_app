@@ -277,13 +277,15 @@ const ExamEditorPage = () => {
           <Alert>
             ※ 試験を追加したい場合は、
             <a
-              href="mailto:koinunopoti@gmail.com"
+              href="https://github.com/koinunopochi/exam_app/issues/new?template=exam_submission.md"
               className="text-blue-600"
-              aria-label="Email"
+              aria-label="GitHub Issue"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              管理者アドレス
+              GitHub Issue
             </a>
-            までファイルを添付していただければ問題がないか確認後掲載いたします。
+            を作成してください。ZIPファイル等の添付はセキュリティリスクのため禁止されています。
           </Alert>
         </CardHeader>
         <CardContent>
