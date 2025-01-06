@@ -27,6 +27,31 @@
    pnpm install
    ```
 
+3. 環境変数の設定
+   `.env.sample` ファイルをコピーして `.env` ファイルを作成し、必要な設定を行います。
+
+   ```bash
+   cp .env.sample .env
+   ```
+
+   設定可能な環境変数:
+   - `VITE_API_BASE_URL`: APIのベースURL（例: http://localhost:9000/sample）
+
+4. MinIOの設定（オプション）
+   ファイルストレージとしてMinIOを使用する場合、以下の手順で設定を行います:
+   
+   a. MinIOサーバーを起動
+   ```bash
+   docker-compose up -d
+   ```
+
+   b. MinIOコンソールにアクセス（http://localhost:9090）
+   - デフォルト認証情報:
+     - ユーザー名: minioadmin
+     - パスワード: minioadmin
+
+   c. バケットを作成し、APIの設定を更新
+
 ## 開発サーバーの起動
 
 ```bash
