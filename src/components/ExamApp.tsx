@@ -18,108 +18,31 @@ import { ResultsContainer } from './exam-taking/results';
 // 試験の状態を管理する型
 type ExamState = 'init' | 'confirm' | 'exam' | 'complete';
 
+import { useExamTimer } from './exam-taking/hooks/useExamTimer';
+import { useExamData } from './exam-taking/hooks/useExamData';
+
 const ExamApp = () => {
   const [searchParams] = useSearchParams();
   const [examState, setExamState] = useState<ExamState>('init');
   const [examId, setExamId] = useState(searchParams.get('exam_id') || '');
   const [username, setUsername] = useState('');
-  const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [examResult, setExamResult] = useState<any>(null);
   const [correctAnswers, setCorrectAnswers] = useState<any>(null);
-  const [timeLimit, setTimeLimit] = useState<number | undefined>();
   const [examStartTime, setExamStartTime] = useState<number>(0);
- const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const initializeAnswers = (questions: any[]) => {
-    const initialAnswers = {};
-    questions.forEach((question) => {
-      switch (question.type) {
-        case 'single-choice':
-        case 'multiple-choice':
-          initialAnswers[question.id] = {
-            type: question.type,
-            selectedOptions: [],
-            timestamp: Date.now(),
-          };
-          break;
-        case 'text':
-          initialAnswers[question.id] = {
-            type: question.type,
-            text: '',
-            timestamp: Date.now(),
-          };
-          break;
-        case 'fill-in':
-          initialAnswers[question.id] = {
-            type: question.type,
-            answers: {},
-            timestamp: Date.now(),
-          };
-          break;
-        case 'sort':
-          // 並び替え問題の初期順序をランダム化
-          initialAnswers[question.id] = {
-            type: question.type,
-            order: shuffleArray(
-              [...question.items.keys()].map((i) => i.toString())
-            ),
-            timestamp: Date.now(),
-          };
-          break;
-      }
-    });
-    return initialAnswers;
-  };
-
-  // 配列をランダムに並び替える関数
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
-  };
-
-  // 試験データを読み込む
-  const loadExamData = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/exams/${examId}/questions.json`
-      );
-      if (!response.ok) {
-        setErrorMessage(
-          '試験データの取得に失敗しました。\n試験IDが正しいか確認してください。'
-        );
-        return false;
-      }
-      const data: any = await response.json();
-      setQuestions(data.questions);
-      setTimeLimit(data.time_limit);
-      setErrorMessage(null);
-      // 問題データ読み込み後に初期回答状態を設定
-      setAnswers(initializeAnswers(data.questions));
-      return true;
-    } catch (error) {
-      console.error('Error loading exam:', error);
-      setErrorMessage(
-        '試験データの取得中にエラーが発生しました。\n試験IDが正しいか確認してください。'
-      );
-      return false;
-    }
-  };
-
-  // 制限時間切れの処理を追加
-  const handleTimeUp = () => {
+  const {
+    questions,
+    timeLimit: initialTimeLimit,
+    errorMessage,
+    loadExamData,
+  } = useExamData(examId);
+  const { timeLimit, handleTimeUp } = useExamTimer(initialTimeLimit, () => {
     alert('制限時間が終了しました。試験を終了します。');
-    setTimeLimit(undefined);
     finishExam();
-  };
+  });
 
-  // 試験開始の確認
   const handleStartConfirm = async () => {
     if (!examId.trim() || !username.trim()) {
       alert('試験IDとユーザー名を入力してください');
