@@ -7,6 +7,7 @@ interface ExamConfirmationProps {
   examId: string;
   username: string;
   questionCount: number;
+  timeLimit?: number;
   onBack: () => void;
   onStart: () => void;
 }
@@ -15,6 +16,7 @@ export const ExamConfirmation: React.FC<ExamConfirmationProps> = ({
   examId,
   username,
   questionCount,
+  timeLimit,
   onBack,
   onStart,
 }) => {
@@ -40,6 +42,11 @@ export const ExamConfirmation: React.FC<ExamConfirmationProps> = ({
           <p>
             <strong>問題数:</strong> {questionCount}問
           </p>
+          {timeLimit && (
+            <p>
+              <strong>試験時間:</strong> {timeLimit}分
+            </p>
+          )}
         </div>
         <div className="flex justify-end space-x-2">
           <Button variant="outline" onClick={onBack}>

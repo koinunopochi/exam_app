@@ -8,7 +8,7 @@ interface ExamScoreProps {
   percentage: number;
 }
 
-const ExamScore: React.FC<ExamScoreProps> = ({
+export const ExamScore: React.FC<ExamScoreProps> = ({
   earnedPoints,
   totalPoints,
   percentage,
@@ -65,5 +65,3 @@ const ExamScore: React.FC<ExamScoreProps> = ({
     </Card>
   );
 };
-
-export default ExamScore;

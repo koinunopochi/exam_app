@@ -1,0 +1,41 @@
+name: Build React on S3
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm run build
+
+      - name: Deploy
+        run: |
+          aws s3 cp --recursive dist s3://exam.tetex.tech/

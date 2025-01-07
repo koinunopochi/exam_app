@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,18 +11,16 @@ import {
 import { createSecureZip } from '@/utils/crypto';
 import { ExamStartForm } from './exam-taking/ExamStartForm';
 import { ExamConfirmation } from './exam-taking/ExamConfirmation';
-import { QuestionRenderer } from './exam-taking/QuestionRenderer';
-import { ExamCompletionDialogs } from './exam-taking/ExamCompletionDialogs';
-import { QuestionResult } from './exam-taking/answers/QuestionResult';
-import ExamTimer from './exam-taking/ExamTimer';
-import ExamScore from './exam-taking/ExamScore';
+import { ExamContainer } from './exam-taking/exam';
+import { ResultsContainer } from './exam-taking/results';
 
 // 試験の状態を管理する型
 type ExamState = 'init' | 'confirm' | 'exam' | 'complete';
 
 const ExamApp = () => {
+  const [searchParams] = useSearchParams();
   const [examState, setExamState] = useState<ExamState>('init');
-  const [examId, setExamId] = useState('');
+  const [examId, setExamId] = useState(searchParams.get('exam_id') || '');
   const [username, setUsername] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -33,6 +30,7 @@ const ExamApp = () => {
   const [correctAnswers, setCorrectAnswers] = useState<any>(null);
   const [timeLimit, setTimeLimit] = useState<number | undefined>();
   const [examStartTime, setExamStartTime] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const initializeAnswers = (questions: any[]) => {
     const initialAnswers = {};
@@ -91,15 +89,24 @@ const ExamApp = () => {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/exams/${examId}/questions.json`
       );
-      if (!response.ok) throw new Error('Failed to load exam data');
+      if (!response.ok) {
+        setErrorMessage(
+          '試験データの取得に失敗しました。\n試験IDが正しいか確認してください。'
+        );
+        return false;
+      }
       const data: any = await response.json();
       setQuestions(data.questions);
       setTimeLimit(data.time_limit);
+      setErrorMessage(null);
       // 問題データ読み込み後に初期回答状態を設定
       setAnswers(initializeAnswers(data.questions));
       return true;
     } catch (error) {
       console.error('Error loading exam:', error);
+      setErrorMessage(
+        '試験データの取得中にエラーが発生しました。\n試験IDが正しいか確認してください。'
+      );
       return false;
     }
   };
@@ -412,112 +419,48 @@ const ExamApp = () => {
               setExamStartTime(Date.now());
               setExamState('exam');
             }}
+            timeLimit={timeLimit}
           />
         );
 
       case 'exam':
         if (!questions.length) return null;
         return (
-          <div className="space-y-4">
-            <ExamTimer
-              timeLimit={timeLimit}
-              onTimeUp={handleTimeUp}
-              examStartTime={examStartTime}
-            />
-            <Card className="w-full max-w-3xl mx-auto">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>
-                    問題 {currentQuestionIndex + 1} / {questions.length}
-                  </CardTitle>
-                  <Button variant="outline" onClick={showFinishConfirmation}>
-                    終了する
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="border-b pb-4">
-                    <p className="text-lg mb-4">
-                      {questions[currentQuestionIndex].text}
-                    </p>
-                    <QuestionRenderer
-                      question={questions[currentQuestionIndex]}
-                      answer={answers[questions[currentQuestionIndex].id]}
-                      onAnswer={(answer) =>
-                        saveAnswer(questions[currentQuestionIndex].id, answer)
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-between pt-4">
-                    <Button
-                      variant="outline"
-                      disabled={currentQuestionIndex === 0}
-                      onClick={() =>
-                        setCurrentQuestionIndex((prev) => prev - 1)
-                      }
-                    >
-                      前の問題
-                    </Button>
-                    <Button
-                      disabled={currentQuestionIndex === questions.length - 1}
-                      onClick={() =>
-                        setCurrentQuestionIndex((prev) => prev + 1)
-                      }
-                    >
-                      次の問題
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ExamContainer
+            questions={questions}
+            currentQuestionIndex={currentQuestionIndex}
+            answers={answers}
+            onAnswer={saveAnswer}
+            onNavigate={setCurrentQuestionIndex}
+            onFinish={showFinishConfirmation}
+            timeLimit={timeLimit}
+            examStartTime={examStartTime}
+            onTimeUp={handleTimeUp}
+          />
         );
 
       case 'complete':
         return (
-          <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>試験完了</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ExamCompletionDialogs />
-
-              {examResult && (
-                <div className="space-y-6">
-                  <ExamScore
-                    earnedPoints={examResult.earnedPoints}
-                    percentage={examResult.percentage}
-                    totalPoints={examResult.totalPoints}
-                  />
-
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">問題別の結果</h4>
-                    {questions.map((question, index) => {
-                      const result = examResult.questionResults[question.id];
-                      if (!result) return null;
-                      return (
-                        <QuestionResult
-                          answers={answers}
-                          correctAnswers={correctAnswers}
-                          index={index}
-                          question={question}
-                          result={result}
-                          key={question.id}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ResultsContainer
+            answers={answers}
+            correctAnswers={correctAnswers}
+            examResult={examResult}
+            questions={questions}
+          />
         );
     }
   };
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
+      {errorMessage && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <span className="block sm:inline">{errorMessage}</span>
+        </div>
+      )}
       {renderContent()}
 
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

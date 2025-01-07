@@ -1,40 +1,67 @@
 import { useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { Question, QuestionAnswer } from '../../types/question';
+import type { DragEvent } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import JSZip from 'jszip';
+import ExamAnswerDetails from '../exam-admin/ExamAnswerDetails';
 
-const ExamAdminViewer = () => {
-  const [examData, setExamData] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
+const ExamAdminPage = () => {
+  const [examData, setExamData] = useState<{
+    examId: string;
+    username: string;
+    timestamp: number;
+    result: {
+      earnedPoints: number;
+      totalPoints: number;
+      percentage: number;
+      questionResults: Record<string, {
+        isCorrect: boolean;
+        earnedPoints: number;
+        possiblePoints: number;
+      }>;
+    };
+    answers: Record<string, QuestionAnswer>;
+    metadata: {
+      userAgent: string;
+      platform: string;
+      language: string;
+    };
+  } | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string, QuestionAnswer>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // 暗号化された結果ファイルを読み込む
-  const handleFileUpload = useCallback(async (files) => {
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setError('ファイルが選択されていません');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const zip = new JSZip();
       const zipContent = await zip.loadAsync(files[0]);
+      if (!zipContent) {
+        setError('ZIPファイルの読み込みに失敗しました');
+        return;
+      }
 
       // encrypted_data.jsonとkey.jsonを読み込む
       const encryptedDataPromise = zipContent
         .file('encrypted_data.json')
-        .async('text');
-      const keyDataPromise = zipContent.file('key.json').async('text');
+        ?.async('text');
+      const keyDataPromise = zipContent.file('key.json')?.async('text');
+
+      if (!encryptedDataPromise || !keyDataPromise) {
+        setError('ZIPファイルに必要なファイルが含まれていません');
+        return;
+      }
 
       const [encryptedDataText, keyDataText] = await Promise.all([
         encryptedDataPromise,
@@ -107,8 +134,9 @@ const ExamAdminViewer = () => {
       setQuestions(questionsData.questions);
       setAnswers(answersData.answers);
       setExamData(examResult);
-    } catch (err) {
-      setError('結果ファイルの読み込みに失敗しました: ' + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError('結果ファイルの読み込みに失敗しました: ' + message);
       console.error('Error processing result file:', err);
     } finally {
       setLoading(false);
@@ -117,7 +145,7 @@ const ExamAdminViewer = () => {
 
   // ドラッグ&ドロップの処理
   const handleDrop = useCallback(
-    (e) => {
+    (e: DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       const files = e.dataTransfer.files;
       if (files.length > 0) {
@@ -127,35 +155,9 @@ const ExamAdminViewer = () => {
     [handleFileUpload]
   );
 
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   }, []);
-
-  // 回答の表示をフォーマット
-  const formatAnswer = (answer, question) => {
-    switch (question.type) {
-      case 'single-choice':
-      case 'multiple-choice': {
-        const selectedOptions = answer.selectedOptions.map((optId) => {
-          const option = question.options.find((opt) => opt.id === optId);
-          return option ? option.text : optId;
-        });
-        return selectedOptions.join(', ');
-      }
-      case 'text':
-        return answer.text;
-      case 'fill-in':
-        return Object.entries(answer.answers)
-          .map(([key, value]) => `空欄${key}: ${value}`)
-          .join(', ');
-      case 'sort':
-        return answer.order
-          .map((itemId) => question.items[parseInt(itemId)])
-          .join(' → ');
-      default:
-        return JSON.stringify(answer);
-    }
-  };
 
   return (
     <div className="container mx-auto p-4 space-y-4">
@@ -169,13 +171,22 @@ const ExamAdminViewer = () => {
               className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:bg-secondary/20"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              onClick={() => document.getElementById('fileInput').click()}
+                onClick={() => {
+                  const fileInput = document.getElementById('fileInput');
+                  if (fileInput) {
+                    fileInput.click();
+                  }
+                }}
             >
               <input
                 type="file"
                 id="fileInput"
                 className="hidden"
-                onChange={(e) => handleFileUpload(e.target.files)}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleFileUpload(e.target.files);
+                  }
+                }}
                 accept=".zip"
               />
               <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -245,58 +256,11 @@ const ExamAdminViewer = () => {
                   <CardTitle>回答詳細</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[600px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>問題</TableHead>
-                          <TableHead>回答</TableHead>
-                          <TableHead>正誤</TableHead>
-                          <TableHead>得点</TableHead>
-                          <TableHead>採点方式</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {questions.map((question, index) => {
-                          const answer = examData.answers[question.id];
-                          const result =
-                            examData.result.questionResults[question.id];
-                          if (!answer || !result) return null;
-
-                          return (
-                            <TableRow key={question.id}>
-                              <TableCell>
-                                <div className="font-medium">
-                                  問題 {index + 1}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {question.text}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {formatAnswer(answer, question)}
-                              </TableCell>
-                              <TableCell>
-                                {result.isCorrect ? (
-                                  <span className="text-green-600">○</span>
-                                ) : (
-                                  <span className="text-red-600">×</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {result.earnedPoints} / {result.possiblePoints}
-                              </TableCell>
-                              <TableCell>
-                                {question.gradingType === 'auto'
-                                  ? '自動'
-                                  : '手動'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                  <ExamAnswerDetails
+                    questions={questions}
+                    answers={examData.answers}
+                    questionResults={examData.result.questionResults}
+                  />
                 </CardContent>
               </Card>
 
@@ -378,4 +342,4 @@ const ExamAdminViewer = () => {
   );
 };
 
-export default ExamAdminViewer;
+export default ExamAdminPage;
