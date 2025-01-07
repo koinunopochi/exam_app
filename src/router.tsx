@@ -7,6 +7,7 @@ import ExamIndexPage from './components/pages/ExamIndexPage';
 const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
+const AboutPage = React.lazy(() => import('./components/pages/AboutPage'));
 
 const router = createBrowserRouter([
   {
@@ -52,6 +53,16 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <HelpSupportPage />
+      </Layout>
+    ),
+  },
+  {
+    path: '/about',
+    element: (
+      <Layout>
+        <Suspense fallback={<div>Loading...</div>}>
+          <AboutPage />
+        </Suspense>
       </Layout>
     ),
   },
