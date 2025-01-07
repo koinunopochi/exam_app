@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,7 +31,7 @@ const ExamApp = () => {
   const [correctAnswers, setCorrectAnswers] = useState<any>(null);
   const [timeLimit, setTimeLimit] = useState<number | undefined>();
   const [examStartTime, setExamStartTime] = useState<number>(0);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const initializeAnswers = (questions: any[]) => {
     const initialAnswers = {};
