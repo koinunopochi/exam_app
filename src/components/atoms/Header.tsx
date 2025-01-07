@@ -1,5 +1,5 @@
 import { Button } from 'src/components/ui/button';
-import { FaHome, FaBook, FaQuestionCircle, FaEdit, FaChartLine, FaClipboardList } from 'react-icons/fa';
+import { FaHome, FaBook, FaQuestionCircle, FaEdit, FaChartLine, FaClipboardList, FaInfoCircle } from 'react-icons/fa';
 
 const Header = () => (
   <nav className="bg-white shadow-md p-4 mb-4">
@@ -59,6 +59,14 @@ const Header = () => (
           >
             <FaQuestionCircle className="w-5 h-5" />
             ヘルプ・サポート
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2"
+            onClick={() => (window.location.href = '/about')}
+          >
+            <FaInfoCircle className="w-5 h-5" />
+            About
           </Button>
         </div>
       </div>

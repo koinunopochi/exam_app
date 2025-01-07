@@ -1,6 +1,6 @@
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Github, Book, HelpCircle } from 'lucide-react';
+import { Github, Book, HelpCircle, InfoIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
@@ -39,6 +39,12 @@ const Footer = () => {
                 <Link to="/help-support" className="inline-flex items-center">
                   <HelpCircle className="w-4 h-4 mr-2" />
                   ヘルプ・サポート
+                </Link>
+              </Button>
+              <Button variant="link" className="justify-start p-0 h-auto" asChild>
+                <Link to="/about" className="inline-flex items-center">
+                  <InfoIcon className="w-4 h-4 mr-2" />
+                  About
                 </Link>
               </Button>
             </nav>
