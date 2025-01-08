@@ -1,10 +1,12 @@
 import React, { Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import Layout from './components/Layout';
-import ExamApp from './components/ExamApp';
 import ExamAdminPage from './components/pages/ExamAdminPage';
 import ExamIndexPage from './components/pages/ExamIndexPage';
-const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
+import ExamTakingPage from './components/pages/ExamTakingPage';
+const ExamEditorPage = React.lazy(
+  () => import('./components/pages/ExamEditorPage')
+);
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
 const AboutPage = React.lazy(() => import('./components/pages/AboutPage'));
@@ -20,7 +22,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/exam',
-    element: <ExamApp />,
+    element: <ExamTakingPage />,
   },
   {
     path: '/viewer',

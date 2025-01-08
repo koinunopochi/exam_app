@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import {
   Collapsible,
@@ -6,12 +5,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ChevronRight } from 'lucide-react';
-import { SingleChoiceAnswer } from './SingleChoiceAnswer';
-import { MultipleChoiceAnswer } from './MultipleChoiceAnswer';
-import { TextAnswer } from './TextAnswer';
-import { FillInAnswer } from './FillInAnswer';
-import { SortAnswer } from './SortAnswer';
 import { Question } from '@/types/question';
+import { SingleChoiceAnswer } from '../answers/SingleChoiceAnswer';
+import { MultipleChoiceAnswer } from '../answers/MultipleChoiceAnswer';
+import { TextAnswer } from '../answers/TextAnswer';
+import { FillInAnswer } from '../answers/FillInAnswer';
+import { SortAnswer } from '../answers/SortAnswer';
 
 interface QuestionResultProps {
   question: Question;
