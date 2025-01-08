@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import ExamAdminPage from './components/pages/ExamAdminPage';
 import ExamIndexPage from './components/pages/ExamIndexPage';
 import ExamTakingPage from './components/pages/ExamTakingPage';
+import NotFoundPage from './components/pages/NotFoundPage';
 const ExamEditorPage = React.lazy(
   () => import('./components/pages/ExamEditorPage')
 );
@@ -65,6 +66,14 @@ const router = createBrowserRouter([
         <Suspense fallback={<div>Loading...</div>}>
           <AboutPage />
         </Suspense>
+      </Layout>
+    ),
+  },
+  {
+    path: '*',
+    element: (
+      <Layout>
+        <NotFoundPage />
       </Layout>
     ),
   },
