@@ -4,7 +4,9 @@ import Layout from './components/Layout';
 import ExamAdminPage from './components/pages/ExamAdminPage';
 import ExamIndexPage from './components/pages/ExamIndexPage';
 import ExamTakingPage from './components/pages/ExamTakingPage';
-const ExamEditorPage = React.lazy(() => import('./components/pages/ExamEditorPage'));
+const ExamEditorPage = React.lazy(
+  () => import('./components/pages/ExamEditorPage')
+);
 import ManualPage from './components/pages/ManualPage';
 import HelpSupportPage from './components/pages/HelpSupportPage';
 const AboutPage = React.lazy(() => import('./components/pages/AboutPage'));
@@ -19,12 +21,8 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/exam-taking',
-    element: (
-      <Layout>
-        <ExamTakingPage />
-      </Layout>
-    ),
+    path: '/exam',
+    element: <ExamTakingPage />,
   },
   {
     path: '/viewer',
