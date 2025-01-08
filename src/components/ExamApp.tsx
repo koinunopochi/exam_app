@@ -14,6 +14,7 @@ import { ExamContainer } from './exam-taking/exam';
 import { ResultsContainer } from './exam-taking/results';
 
 import { useExamState } from './exam-taking/hooks/useExamState';
+import { useExamAnswers } from './exam-taking/hooks/useExamAnswers';
 import { useExamTimer } from './exam-taking/hooks/useExamTimer';
 import { useExamData } from './exam-taking/hooks/useExamData';
 import { useExamGrading } from './exam-taking/hooks/useExamGrading';
@@ -31,16 +32,23 @@ const ExamApp = () => {
     startExam,
   } = useExamState();
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: string]: any }>({});
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
   const {
     questions,
     timeLimit: initialTimeLimit,
     errorMessage,
     loadExamData,
   } = useExamData(examId);
+
+  const {
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+    answers,
+    saveAnswer,
+    getUnansweredCount,
+    getAnsweredCount,
+  } = useExamAnswers(questions);
+
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const { timeLimit, handleTimeUp } = useExamTimer(initialTimeLimit, () => {
     alert('制限時間が終了しました。試験を終了します。');
@@ -88,57 +96,15 @@ const ExamApp = () => {
     }
   };
 
-  // 回答の保存
-  const saveAnswer = (questionId: string, answer: any) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: {
-        ...answer,
-        timestamp: Date.now(),
-      },
-    }));
-  };
-
-  // 回答状態をチェックする関数
-  const isAnswered = (answer: any): boolean => {
-    if (!answer) return false;
-
-    switch (answer.type) {
-      case 'single-choice':
-      case 'multiple-choice':
-        return (
-          Array.isArray(answer.selectedOptions) &&
-          answer.selectedOptions.length > 0
-        );
-      case 'text':
-        return answer.text !== undefined && answer.text.trim() !== '';
-      case 'fill-in':
-        return (
-          answer.answers &&
-          Object.values(answer.answers).some(
-            (a: any) => a && typeof a === 'string' && a.trim() !== ''
-          )
-        );
-      case 'sort':
-        return Array.isArray(answer.order) && answer.order.length > 0;
-      default:
-        return false;
-    }
-  };
-
   const showFinishConfirmation = () => {
-    const unansweredCount = questions.reduce((count, question) => {
-      const answer = answers[question.id];
-      return count + (isAnswered(answer) ? 0 : 1);
-    }, 0);
-
+    const unansweredCount = getUnansweredCount();
     if (unansweredCount > 0) {
       if (
         !confirm(
           `未回答の問題が${unansweredCount}問あります。\n` +
-            `全${questions.length}問中${
-              questions.length - unansweredCount
-            }問が回答済みです。\n` +
+            `全${
+              questions.length
+            }問中${getAnsweredCount()}問が回答済みです。\n` +
             `終了してもよろしいですか？`
         )
       ) {
