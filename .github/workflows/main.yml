@@ -38,4 +38,23 @@ jobs:
 
       - name: Deploy
         run: |
-          aws s3 sync dist s3://exam.tetex.tech/ --delete
+          aws s3 sync dist s3://exam.tetex.tech/ \
+            --delete \
+            --cache-control "max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "*.json" \
+            --exclude "*.txt"
+          
+          aws s3 sync dist s3://exam.tetex.tech/ \
+            --delete \
+            --cache-control "no-cache" \
+            --content-type "text/html" \
+            --exclude "*" \
+            --include "*.html"
+          
+          aws s3 sync dist s3://exam.tetex.tech/ \
+            --delete \
+            --cache-control "no-cache" \
+            --content-type "application/json" \
+            --exclude "*" \
+            --include "*.json"
