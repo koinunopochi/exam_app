@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,35 +13,42 @@ import { ExamConfirmation } from './exam-taking/ExamConfirmation';
 import { ExamContainer } from './exam-taking/exam';
 import { ResultsContainer } from './exam-taking/results';
 
-// 試験の状態を管理する型
-type ExamState = 'init' | 'confirm' | 'exam' | 'complete';
-
+import { useExamState } from './exam-taking/hooks/useExamState';
 import { useExamTimer } from './exam-taking/hooks/useExamTimer';
 import { useExamData } from './exam-taking/hooks/useExamData';
 import { useExamGrading } from './exam-taking/hooks/useExamGrading';
 
 const ExamApp = () => {
-  const [searchParams] = useSearchParams();
-  const [examState, setExamState] = useState<ExamState>('init');
-  const [examId, setExamId] = useState(searchParams.get('exam_id') || '');
-  const [username, setUsername] = useState('');
+  const {
+    examState,
+    setExamState,
+    examId,
+    setExamId,
+    username,
+    setUsername,
+    examStartTime,
+    handleStartConfirm,
+    startExam,
+  } = useExamState();
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: any }>({});
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [examStartTime, setExamStartTime] = useState<number>(0);
+
   const {
     questions,
     timeLimit: initialTimeLimit,
     errorMessage,
     loadExamData,
   } = useExamData(examId);
+
   const { timeLimit, handleTimeUp } = useExamTimer(initialTimeLimit, () => {
     alert('制限時間が終了しました。試験を終了します。');
     finishExam();
   });
+
   const { examResult, correctAnswers, gradeExam } = useExamGrading(questions);
 
-  // finishExam関数の修正
   const finishExam = async () => {
     const examData = {
       examId,
@@ -57,10 +63,7 @@ const ExamApp = () => {
     };
 
     try {
-      // 採点を実行
       const result = await gradeExam(examId, answers);
-
-      // 結果データを含めて暗号化・ZIP化
       const finalData = {
         ...examData,
         result,
@@ -68,8 +71,6 @@ const ExamApp = () => {
       };
 
       const zipBlob = await createSecureZip(finalData);
-
-      // ZIPファイルのダウンロード
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -84,16 +85,6 @@ const ExamApp = () => {
     } catch (error) {
       console.error('Error processing exam data:', error);
       alert('結果の処理中にエラーが発生しました');
-    }
-  };
-  const handleStartConfirm = async () => {
-    if (!examId.trim() || !username.trim()) {
-      alert('試験IDとユーザー名を入力してください');
-      return;
-    }
-    const success = await loadExamData();
-    if (success) {
-      setExamState('confirm');
     }
   };
 
@@ -119,10 +110,8 @@ const ExamApp = () => {
           Array.isArray(answer.selectedOptions) &&
           answer.selectedOptions.length > 0
         );
-
       case 'text':
         return answer.text !== undefined && answer.text.trim() !== '';
-
       case 'fill-in':
         return (
           answer.answers &&
@@ -130,10 +119,8 @@ const ExamApp = () => {
             (a: any) => a && typeof a === 'string' && a.trim() !== ''
           )
         );
-
       case 'sort':
         return Array.isArray(answer.order) && answer.order.length > 0;
-
       default:
         return false;
     }
@@ -171,7 +158,7 @@ const ExamApp = () => {
             username={username}
             onExamIdChange={setExamId}
             onUsernameChange={setUsername}
-            onSubmit={handleStartConfirm}
+            onSubmit={() => handleStartConfirm(loadExamData)}
           />
         );
 
@@ -182,10 +169,7 @@ const ExamApp = () => {
             username={username}
             questionCount={questions.length}
             onBack={() => setExamState('init')}
-            onStart={() => {
-              setExamStartTime(Date.now());
-              setExamState('exam');
-            }}
+            onStart={startExam}
             timeLimit={timeLimit}
           />
         );
