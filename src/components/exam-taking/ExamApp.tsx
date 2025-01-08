@@ -1,22 +1,22 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { ExamStartForm } from './exam-taking/ExamStartForm';
-import { ExamConfirmation } from './exam-taking/ExamConfirmation';
-import { ExamContainer } from './exam-taking/exam';
-import { ResultsContainer } from './exam-taking/results';
+} from '../ui/dialog';
+import { ExamStartForm } from './ExamStartForm';
+import { ExamConfirmation } from './ExamConfirmation';
+import { ExamContainer } from './exam';
+import { ResultsContainer } from './results';
 
-import { useExamState } from './exam-taking/hooks/useExamState';
-import { useExamAnswers } from './exam-taking/hooks/useExamAnswers';
-import { useExamFinish } from './exam-taking/hooks/useExamFinish';
-import { useExamTimer } from './exam-taking/hooks/useExamTimer';
-import { useExamData } from './exam-taking/hooks/useExamData';
-import { useExamGrading } from './exam-taking/hooks/useExamGrading';
+import { useExamState } from './hooks/useExamState';
+import { useExamAnswers } from './hooks/useExamAnswers';
+import { useExamFinish } from './hooks/useExamFinish';
+import { useExamTimer } from './hooks/useExamTimer';
+import { useExamData } from './hooks/useExamData';
+import { useExamGrading } from './hooks/useExamGrading';
 
 const ExamApp = () => {
   const {
@@ -70,7 +70,6 @@ const ExamApp = () => {
     onComplete: () => setExamState('complete'),
   });
 
-  // 現在の状態に応じたコンポーネントをレンダリング
   const renderContent = () => {
     switch (examState) {
       case 'init':
