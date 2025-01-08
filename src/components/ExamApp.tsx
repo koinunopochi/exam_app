@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -7,7 +6,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { createSecureZip } from '@/utils/crypto';
 import { ExamStartForm } from './exam-taking/ExamStartForm';
 import { ExamConfirmation } from './exam-taking/ExamConfirmation';
 import { ExamContainer } from './exam-taking/exam';
@@ -15,6 +13,7 @@ import { ResultsContainer } from './exam-taking/results';
 
 import { useExamState } from './exam-taking/hooks/useExamState';
 import { useExamAnswers } from './exam-taking/hooks/useExamAnswers';
+import { useExamFinish } from './exam-taking/hooks/useExamFinish';
 import { useExamTimer } from './exam-taking/hooks/useExamTimer';
 import { useExamData } from './exam-taking/hooks/useExamData';
 import { useExamGrading } from './exam-taking/hooks/useExamGrading';
@@ -48,8 +47,6 @@ const ExamApp = () => {
     getAnsweredCount,
   } = useExamAnswers(questions);
 
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
   const { timeLimit, handleTimeUp } = useExamTimer(initialTimeLimit, () => {
     alert('制限時間が終了しました。試験を終了します。');
     finishExam();
@@ -57,62 +54,21 @@ const ExamApp = () => {
 
   const { examResult, correctAnswers, gradeExam } = useExamGrading(questions);
 
-  const finishExam = async () => {
-    const examData = {
-      examId,
-      username,
-      timestamp: Date.now(),
-      answers,
-      metadata: {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-      },
-    };
-
-    try {
-      const result = await gradeExam(examId, answers);
-      const finalData = {
-        ...examData,
-        result,
-        correctAnswers,
-      };
-
-      const zipBlob = await createSecureZip(finalData);
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `exam_result_${examId}_${username}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      setExamState('complete');
-      setShowConfirmDialog(false);
-    } catch (error) {
-      console.error('Error processing exam data:', error);
-      alert('結果の処理中にエラーが発生しました');
-    }
-  };
-
-  const showFinishConfirmation = () => {
-    const unansweredCount = getUnansweredCount();
-    if (unansweredCount > 0) {
-      if (
-        !confirm(
-          `未回答の問題が${unansweredCount}問あります。\n` +
-            `全${
-              questions.length
-            }問中${getAnsweredCount()}問が回答済みです。\n` +
-            `終了してもよろしいですか？`
-        )
-      ) {
-        return;
-      }
-    }
-    setShowConfirmDialog(true);
-  };
+  const {
+    showConfirmDialog,
+    setShowConfirmDialog,
+    showFinishConfirmation,
+    finishExam,
+  } = useExamFinish({
+    examId,
+    username,
+    answers,
+    gradeExam,
+    questionsCount: questions.length,
+    getUnansweredCount,
+    getAnsweredCount,
+    onComplete: () => setExamState('complete'),
+  });
 
   // 現在の状態に応じたコンポーネントをレンダリング
   const renderContent = () => {
