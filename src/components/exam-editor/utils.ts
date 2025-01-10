@@ -9,7 +9,6 @@ export const generateUniqueId = (prefix: string = '') => {
 };
 
 export const downloadZIP = async (files: Array<{name: string, data: any}>) => {
-  const zip = new JSZip();
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
   // 鍵ペアの生成
