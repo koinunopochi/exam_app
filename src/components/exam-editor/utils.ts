@@ -55,3 +55,93 @@ export const downloadZIP = async (files: Array<{name: string, data: any}>) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+export const importZIP = async (file: File) => {
+  try {
+    const zip = new JSZip();
+    const content = await zip.loadAsync(file);
+    
+    // 暗号化されたZIPかどうかを判定
+    const isEncrypted = Object.keys(content.files).some(name => 
+      name.startsWith('encrypted_') || name === 'key_info.json'
+    );
+
+    if (isEncrypted) {
+      // 暗号化されたZIPの処理
+      const keyInfoFile = content.file('key_info.json');
+      if (!keyInfoFile) {
+        throw new Error('key_info.jsonが見つかりません');
+      }
+
+      const keyInfo = JSON.parse(await keyInfoFile.async('text'));
+      const { encryptedAesKey, privateKey } = keyInfo;
+
+      // 秘密鍵の復元
+      const privateKeyObj = await window.crypto.subtle.importKey(
+        'jwk',
+        privateKey,
+        {
+          name: 'RSA-OAEP',
+          hash: 'SHA-256',
+        },
+        true,
+        ['decrypt']
+      );
+
+      // AES鍵の復号
+      const decryptedAesKey = await window.crypto.subtle.decrypt(
+        { name: 'RSA-OAEP' },
+        privateKeyObj,
+        new Uint8Array(encryptedAesKey).buffer
+      );
+
+      // AES鍵の復元
+      const aesKey = await window.crypto.subtle.importKey(
+        'raw',
+        decryptedAesKey,
+        { name: 'AES-GCM' },
+        true,
+        ['decrypt']
+      );
+
+      // 暗号化されたファイルを復号
+      const decryptedFiles = await Promise.all(
+        Object.entries(content.files)
+          .filter(([name]) => name.startsWith('encrypted_'))
+          .map(async ([name, file]) => {
+            const encryptedData = JSON.parse(await file.async('text'));
+            const { iv, data } = encryptedData;
+
+            const decryptedData = await window.crypto.subtle.decrypt(
+              {
+                name: 'AES-GCM',
+                iv: new Uint8Array(iv)
+              },
+              aesKey,
+              new Uint8Array(data).buffer
+            );
+
+            const originalName = name.replace('encrypted_', '');
+            return {
+              name: originalName,
+              data: JSON.parse(new TextDecoder().decode(decryptedData))
+            };
+          })
+      );
+
+      return decryptedFiles;
+    } else {
+      // 暗号化されていないZIPの処理
+      const files = await Promise.all(
+        Object.entries(content.files).map(async ([name, file]) => {
+          const data = JSON.parse(await file.async('text'));
+          return { name, data };
+        })
+      );
+      return files;
+    }
+  } catch (error) {
+    console.error('ZIPインポートエラー:', error);
+    throw new Error('ZIPファイルのインポートに失敗しました');
+  }
+};
