@@ -15,7 +15,7 @@ import {
   SortQuestion,
   TextQuestion,
 } from '../../types/question';
-import { downloadZIP, generateUniqueId } from '../exam-editor/utils';
+import { downloadZIP, generateUniqueId, importZIP } from '../exam-editor/utils';
 import { QuestionCard } from '../exam-editor/QuestionCard';
 import { ChoiceQuestionFields } from '../exam-editor/ChoiceQuestionFields';
 import { TextQuestionFields } from '../exam-editor/TextQuestionFields';
@@ -31,90 +31,76 @@ const ExamEditorPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeLimit, setTimeLimit] = useState<number>(60);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+const handleFileUpload = async (
+  event: React.ChangeEvent<HTMLInputElement>
+): Promise<void> => {
+  const file = event.target.files?.[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const JSZip = (await import('jszip')).default;
-        const zip = await JSZip.loadAsync(e.target?.result as ArrayBuffer);
-        
-        // 必要なファイルを探す
-        const questionFile = Object.keys(zip.files).find(name => name.endsWith('_questions.json'));
-        const answerFile = Object.keys(zip.files).find(name => name.endsWith('_answers.json'));
-        const metadataFile = Object.keys(zip.files).find(name => name.endsWith('_metadata.json'));
+  try {
+    const files = await importZIP(file);
 
-        if (!questionFile || !answerFile || !metadataFile) {
-          throw new Error('必要なファイルがZIP内に見つかりません');
-        }
+    // 必要なファイルを探す
+    const questionFile = files.find((f) => f.name.endsWith('_questions.json'));
+    const answerFile = files.find((f) => f.name.endsWith('_answers.json'));
+    const metadataFile = files.find((f) => f.name.endsWith('_metadata.json'));
 
-        // 各ファイルを読み込む
-        const [questionData, answerData, metadata] = await Promise.all([
-          zip.file(questionFile)?.async('string'),
-          zip.file(answerFile)?.async('string'),
-          zip.file(metadataFile)?.async('string')
-        ]);
+    if (!questionFile || !answerFile || !metadataFile) {
+      throw new Error('必要なファイルがZIP内に見つかりません');
+    }
 
-        if (!questionData || !answerData || !metadata) {
-          throw new Error('ファイルの読み込みに失敗しました');
-        }
+    // データはすでにパース済み（importZIPの戻り値がJSONオブジェクト）
+    const questions = questionFile.data;
+    const answers = answerFile.data;
+    const meta = metadataFile.data;
 
-        // データをパース
-        const questions = JSON.parse(questionData);
-        const answers = JSON.parse(answerData);
-        const meta = JSON.parse(metadata);
+    // 状態を更新
+    if (meta.exam_id) {
+      setExamId(meta.exam_id);
+    }
+    if (meta.title) {
+      setTitle(meta.title);
+    }
+    if (meta.description) {
+      setDescription(meta.description);
+    }
+    if (meta.author) {
+      setAuthor(meta.author);
+    }
+    if (questions.time_limit) {
+      setTimeLimit(questions.time_limit);
+    }
 
-        // 状態を更新
-        if (meta.exam_id) {
-          setExamId(meta.exam_id);
-        }
-        if (meta.title) {
-          setTitle(meta.title);
-        }
-        if (meta.description) {
-          setDescription(meta.description);
-        }
-        if (meta.author) {
-          setAuthor(meta.author);
-        }
-        if (questions.time_limit) {
-          setTimeLimit(questions.time_limit);
-        }
+    // 質問と回答を結合
+    const combinedQuestions = questions.questions.map((q: any) => {
+      const answer = answers.answers[q.id];
+      if (!answer) return q;
 
-        // 質問と回答を結合
-        const combinedQuestions = questions.questions.map((q: any) => {
-          const answer = answers.answers[q.id];
-          if (!answer) return q;
-
-          switch (q.type) {
-            case 'single-choice':
-            case 'multiple-choice':
-              return { ...q, correctOptions: answer.correctOptions };
-            case 'text':
-              return {
-                ...q,
-                expectedAnswer: answer.correctAnswer,
-                caseSensitive: answer.caseSensitive
-              };
-            case 'fill-in':
-              return { ...q, blankAnswers: answer.answers };
-            case 'sort':
-              return { ...q, correctOrder: answer.correctOrder };
-            default:
-              return q;
-          }
-        });
-
-        setQuestions(combinedQuestions);
-      } catch (error: any) {
-        console.error(error);
-        alert('ZIPファイルの読み込みに失敗しました: ' + error.message);
+      switch (q.type) {
+        case 'single-choice':
+        case 'multiple-choice':
+          return { ...q, correctOptions: answer.correctOptions };
+        case 'text':
+          return {
+            ...q,
+            expectedAnswer: answer.correctAnswer,
+            caseSensitive: answer.caseSensitive,
+          };
+        case 'fill-in':
+          return { ...q, blankAnswers: answer.answers };
+        case 'sort':
+          return { ...q, correctOrder: answer.correctOrder };
+        default:
+          return q;
       }
-    };
-    reader.readAsArrayBuffer(file);
-  };
+    });
+
+    setQuestions(combinedQuestions);
+  } catch (error: any) {
+    console.error(error);
+    alert('ZIPファイルの読み込みに失敗しました: ' + error.message);
+  }
+};
 
   const createNewQuestion = (type: QuestionType, id: string): Question => {
     const baseQuestion = {

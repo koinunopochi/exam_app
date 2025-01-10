@@ -3,7 +3,7 @@
 import JSZip from 'jszip';
 
 // 鍵生成のための関数
-async function generateKeyPair() {
+export async function generateKeyPair() {
   const keyPair = await window.crypto.subtle.generateKey(
     {
       name: 'RSA-OAEP',
@@ -18,7 +18,7 @@ async function generateKeyPair() {
 }
 
 // AES鍵の生成
-async function generateAESKey() {
+export async function generateAESKey() {
   return await window.crypto.subtle.generateKey(
     {
       name: 'AES-GCM',
@@ -30,7 +30,7 @@ async function generateAESKey() {
 }
 
 // 公開鍵でAES鍵を暗号化
-async function encryptAESKey(publicKey: CryptoKey, aesKey: CryptoKey) {
+export async function encryptAESKey(publicKey: CryptoKey, aesKey: CryptoKey) {
   const exportedAesKey = await window.crypto.subtle.exportKey('raw', aesKey);
   const encryptedKey = await window.crypto.subtle.encrypt(
     {
@@ -43,7 +43,7 @@ async function encryptAESKey(publicKey: CryptoKey, aesKey: CryptoKey) {
 }
 
 // データの暗号化
-async function encryptData(data: any, aesKey: CryptoKey) {
+export async function encryptData(data: any, aesKey: CryptoKey) {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const encodedData = new TextEncoder().encode(JSON.stringify(data));
 
