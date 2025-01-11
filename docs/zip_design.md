@@ -118,10 +118,6 @@ exam_result.zip
       "correct_answer":["A","B"],
       "explanation": "Basic arithmetic"
     }
-  },
-  "correct_answers": {
-    "question-1": "4",
-    "question-2": ["A", "C"]
   }
 }
 ```
